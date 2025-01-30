@@ -1,0 +1,121 @@
+---
+title: "Project3"
+format: html
+editor: visual
+---
+
+## Project Housing Price in Ames
+
+```{r message=FALSE, warning=FALSE}
+library(mosaic)
+```
+
+This project will analyze the housing price in Ames. In the previous project, we have discussed that the model SalePrice\~Gr.Liv.Area is not really reasonable because the value of the $R^2$ is around 0.5 which shows that the fitted model is not really close to the actual data so the model is not reasonably good. But when the model was added with Neighborhood explanatory variable (SalePrice \~ Gr.Liv.Area + Neighborhood model), the value of $R^2$ has increase a lot from 0.5 to 0.7 which is pretty strong. So SalePrice \~ Gr.Liv.Area + Neighborhood model seems to be the best model for the ames dataset. So now, this project will use regression assumptions to clarify if the SalePrice \~ Gr.Liv.Area + Neighborhood model reasonable or not.
+
+First, let's look at the graph of the ames SalePrice \~ Gr.Liv.Area + Neighborhood model:
+
+```{r,echo=FALSE}
+ames <- read.csv("ames.csv")
+```
+
+```{r,echo=FALSE}
+am <-lm(SalePrice~Gr.Liv.Area + Neighborhood, data =ames)
+gf_point(resid(am)~fitted(am))
+```
+
+There are a few unusual points in the graph which may make the data not accurate. So I create a new dataset called **ames1** that eliminate all unusual points which is when Gr.Liv.Area is larger than 4000 sq ft:
+
+```{r,echo=FALSE}
+ames1 <- subset(ames, Gr.Liv.Area <= 4000)
+```
+
+```{r,echo=FALSE}
+am1 <-lm(SalePrice~Gr.Liv.Area + Neighborhood, data =ames1)
+gf_point(resid(am1)~fitted(am1))
+```
+
+Now I will look at 4 conditions of regression assumptions which is linear relationship, independent errors, normal errors, and equal variances. If the model above fits with all the conditions, the model is reasonable.
+
+1.  **Linear relationship**: From the scatter plot, we can tell that the residual is not distributed linearly because in the first half of the graph, it decreases while the second half, it starts to increase to the right.
+2.  **Independent errors**: The requirement that the residuals be independent simply means that the residuals should not be related to each other which means that the shape of the graph shouldn't have any pattern. However, according to the scatter plot above, we can see that the residual starts to spread out from the left to the right which creates a trumpet shape. So the residuals are not independent.
+3.  **Normal errors:** To qualify this requirement, the shape of the distribution of these errors should be a normal distribution (centered at 0) which means that histogram of the residuals should curve into a straight line. Let's check:
+
+```{r,echo=FALSE}
+qqnorm(resid(am1))
+qqline(resid(am1))
+```
+
+From the graph, I can tell that the model doesn't has normal distribution because it doesn't lie on the straight line. It curves up at the end of the graph (on the right) and there is some data that is under the straight line on the left of the graph.
+
+4.  **Equal variance** **(homoskedasticity)**: means that the standard deviation of that normal distribution can be anything, but it should be the same everywhere. In this cases, we can see that the standard deviation on the right tends to be higher than the standard deviation on the left (according the the scatter plot) So it means that this model doesn't qualify the equal variance requirement.
+
+Therefore, from these 4 condition, the SalePrice \~ Gr.Liv.Area + Neighborhood model seems to violate with the regression assumptions.
+
+So to find a reasonable model, we need to modify the model to fit with the regression assumptions by using transformations: `log(`SalePrice`)` \~Gr.Liv.Area + Neighborhood.
+
+```{r,echo=FALSE}
+am2 <-lm(log(SalePrice)~Gr.Liv.Area + Neighborhood, data =ames1)
+gf_point(resid(am2)~fitted(am2))
+```
+
+According to the new scatter plot, there is a **linear relationship, independent errors** (the shape of the graph doesn't have any pattern which means that the plot doesn't have a trumpet shape) and **equal variance** (the standard deviation is the same everywhere) And the new model **distribute normally** because it lies mostly on a straight line (the graph below)
+
+```{r,echo=FALSE}
+qqnorm(resid(am2))
+qqline(resid(am2))
+```
+
+Therefore, the new model has fulfill the regression assumptions.
+
+Now we will compare the $R^2$ of the 2 models to see which model is more precise.
+
+```{r,echo=FALSE}
+rsquared(am1)
+rsquared(am2)
+```
+
+So we see that the $R^2$ of model 1 = 0.7555103 and the $R^2$ of model 2 = 0.759322. The $R^2$ of model 2 is higher than the $R^2$ of model 1. Therefore, the model 2 provides a better $R^2$.
+
+Now we calculate the precision of the coefficience of 2 models:
+
+-   The confident interval of model 1:
+
+```{r,echo=FALSE}
+confint(am1)
+```
+
+-   The confident interval of model 2:
+
+```{r,echo=FALSE}
+confint(am2)
+```
+
+From the calculation above, we can see that the confident interval of model 1 is wider than the confident interval of model 2. For example, the confident interval of Gr.Liv.Area in model 1 is between 77.64986 and 84.5953 (6.94544 difference)while the confident interval of Gr.Liv.Area in model 2 is between 0.0004012132 and 0.0004368302(3.5617e-05 difference). From this example, we can see that the confident interval in model 1 is wider than model 2 which means that the model 2 is more precise than the model 1.
+
+Now, I will pick Gr.Liv.Area = 2000 and Neighborhood = Somerst and use regression equation to predict its sale price.
+
+```{r, echo = FALSE}
+predict(am2, data.frame( Gr.Liv.Area = 2000, Neighborhood = "Somerst"), interval = "prediction")
+```
+
+```{r, echo = FALSE}
+exp(12.48111)
+exp(12.08752)
+exp(12.87469)
+```
+
+Using the regression equation, the sale price will be \$263316. And we are 95% confidence that the price of the house having 2000 square feet ground living area in Somerst neighborhood are between \$177641 and \$390307.4. The range of the price is quite wide but it is not so wide as to be useless.
+
+To make the model become more useful, I can add more variable to the model like Year.Built variable (in project 2, it increases the value of $R^2$ a lot). And we can 95% confidence that the price of the house that built in 1990 with 2000 squared feet in Somerst is between \$198957.1 and \$335430.4. The gap between the price is much lesser than the model am2 which is \$136473.3 while the am2 is \$212666.4 which means that the new model can be more useful than the log(SalePrice)\~Gr.Liv.Area + Neighborhood model.
+
+```{r, echo = FALSE}
+am3 <-lm(SalePrice~Gr.Liv.Area + Neighborhood + Year.Built + Gr.Liv.Area:Neighborhood , data =ames1)
+predict(am3, data.frame( Gr.Liv.Area = 2000, Neighborhood = "Somerst", Year.Built = 1990), interval = "prediction")
+335430.4 - 198957.1 
+390307.4 - 177641
+```
+
+```{r}
+mod<-(lm(length~sex+birthmonth, data=KidsFeet))
+summary(mod)
+```
